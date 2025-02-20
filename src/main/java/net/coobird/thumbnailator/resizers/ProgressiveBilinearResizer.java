@@ -84,75 +84,58 @@ public class ProgressiveBilinearResizer extends AbstractResizer {
 			throws NullPointerException {
 		super.performChecks(srcImage, destImage);
 		
-		int currentWidth = srcImage.getWidth();
-		int currentHeight = srcImage.getHeight();
-		
-		final int targetWidth = destImage.getWidth();
-		final int targetHeight = destImage.getHeight();
-		
-		// If multi-step downscaling is not required, perform one-step.
-		if ((targetWidth * 2 >= currentWidth) && (targetHeight * 2 >= currentHeight)) {
-			Graphics2D g = createGraphics(destImage);
-			g.drawImage(srcImage, 0, 0, targetWidth, targetHeight, null);
-			g.dispose();
-			return;
-		}
-		
-		// Temporary image used for in-place resizing of image.
-		BufferedImage tempImage = new BufferedImageBuilder(
-				currentWidth,
-				currentHeight,
-				destImage.getType()
-		).build();
-		
-		Graphics2D g = createGraphics(tempImage);
-		g.setComposite(AlphaComposite.Src);
-		
-		/*
-		 * Determine the size of the first resize step should be.
-		 * 1) Beginning from the target size
-		 * 2) Increase each dimension by 2
-		 * 3) Until reaching the original size
-		 */
-		int startWidth = targetWidth;
-		int startHeight = targetHeight;
-		
-		while (startWidth < currentWidth && startHeight < currentHeight) {
-			startWidth *= 2;
-			startHeight *= 2;
-		}
-		
-		currentWidth = startWidth / 2;
-		currentHeight = startHeight / 2;
-
-		// Perform first resize step.
-		g.drawImage(srcImage, 0, 0, currentWidth, currentHeight, null);
-		
-		// Perform an in-place progressive bilinear resize.
-		while (	(currentWidth >= targetWidth * 2) && (currentHeight >= targetHeight * 2) ) {
-			currentWidth /= 2;
-			currentHeight /= 2;
-			
-			if (currentWidth < targetWidth) {
-				currentWidth = targetWidth;
-			}
-			if (currentHeight < targetHeight) {
-				currentHeight = targetHeight;
-			}
-			
-			g.drawImage(
-					tempImage,
-					0, 0, currentWidth, currentHeight,
-					0, 0, currentWidth * 2, currentHeight * 2,
-					null
-			);
-		}
-		
-		g.dispose();
-		
-		// Draw the resized image onto the destination image.
-		Graphics2D destg = createGraphics(destImage);
-		destg.drawImage(tempImage, 0, 0, targetWidth, targetHeight, 0, 0, currentWidth, currentHeight, null);
+        final int targetWidth = destImage.getWidth();
+        final int targetHeight = destImage.getHeight();
+        
+        BufferedImage currentSrcImage = srcImage;
+        int currentSrcWidth = currentSrcImage.getWidth();
+        int currentSrcHeight = currentSrcImage.getHeight();
+        
+        // Temporary image used for in-place resizing of image.
+        BufferedImage tempImage = null;
+        Graphics2D g = null;
+        while (true) {
+            // +1 to avoid downscaling by more than 2 when span is odd.
+            final int tempDstWidth = Math.max(targetWidth, ((currentSrcWidth + 1) / 2));
+            final int tempDstHeight = Math.max(targetHeight, ((currentSrcHeight + 1) / 2));
+            if ((tempDstWidth <= targetWidth)
+                && (tempDstHeight <= targetHeight)) {
+                /*
+                 * Each current span is either close enough from, or lower than, target span:
+                 * will finish by drawing with target spans on destination image.
+                 */
+                break;
+            }
+            
+            if (tempImage == null) {
+                tempImage = new BufferedImageBuilder(
+                    tempDstWidth,
+                    tempDstHeight,
+                    // Fastest type for bilinear (and bicubic).
+                    BufferedImage.TYPE_INT_ARGB_PRE
+                    ).build();
+                g = createGraphics(tempImage);
+                g.setComposite(AlphaComposite.Src);
+            }
+            
+            g.drawImage(
+                currentSrcImage,
+                0, 0, tempDstWidth, tempDstHeight,
+                0, 0, currentSrcWidth, currentSrcHeight,
+                null
+                );
+            
+            currentSrcImage = tempImage;
+            currentSrcWidth = tempDstWidth;
+            currentSrcHeight = tempDstHeight;
+        }
+        if (g != null) {
+            g.dispose();
+        }
+        
+        // Last resizing: target spans onto the destination image.
+        Graphics2D destg = createGraphics(destImage);
+        destg.drawImage(currentSrcImage, 0, 0, targetWidth, targetHeight, 0, 0, currentSrcWidth, currentSrcHeight, null);
 		destg.dispose();
 	}
 }
