@@ -28,12 +28,14 @@ import java.awt.Dimension;
 import java.awt.image.BufferedImage;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.Executor;
 
 import net.coobird.thumbnailator.builders.BufferedImageBuilder;
+import net.coobird.thumbnailator.resizers.DefaultResizerFactory;
 import net.coobird.thumbnailator.resizers.FixedResizerFactory;
 import net.coobird.thumbnailator.resizers.Resizer;
-import net.coobird.thumbnailator.resizers.DefaultResizerFactory;
 import net.coobird.thumbnailator.resizers.ResizerFactory;
+import net.coobird.thumbnailator.resizers.prl.PrlResizersUtils;
 
 /**
  * An abstract class which provides support functionalities for
@@ -157,6 +159,8 @@ public abstract class ThumbnailMaker {
 	 */
 	protected ResizerFactory resizerFactory;
 
+	protected Executor parallelExecutor;
+
 	/**
 	 * Creates and initializes an instance of {@link ThumbnailMaker}.
 	 */
@@ -215,7 +219,11 @@ public abstract class ThumbnailMaker {
 		
 		Resizer resizer = resizerFactory.getResizer(imgSize, thumbnailSize);
 		
-		resizer.resize(img, thumbnailImage);
+		PrlResizersUtils.resizeEventuallyInParallel(
+			resizer,
+			img,
+			thumbnailImage,
+			this.parallelExecutor);
 		
 		return thumbnailImage;
 	}
@@ -253,6 +261,17 @@ public abstract class ThumbnailMaker {
 		ready.set(PARAM_RESIZER);
 		ready.set(PARAM_RESIZERFACTORY);
 		return this;
+	}
+	
+	/**
+	 * Sets the {@link Executor} to use for parallelization.
+	 * 
+	 * @param executor     The {@link Executor} to use for parallelization.
+     * @return              A reference to this object.
+	 */
+	public ThumbnailMaker parallel(Executor parallelExecutor) {
+	    this.parallelExecutor = parallelExecutor;
+	    return this;
 	}
 	
 	/**

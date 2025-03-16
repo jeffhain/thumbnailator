@@ -103,6 +103,12 @@ resizer.resize(sourceImage, destImage);
  *
  */
 public class DefaultResizerFactory implements ResizerFactory {
+    
+	/**
+	 * TODO jeff Changed defaults here.
+	 */
+	private static final boolean MUST_USE_PRL_RESIZERS = true; 
+
 	private static final DefaultResizerFactory INSTANCE = new DefaultResizerFactory();
 
 	/**
@@ -119,10 +125,16 @@ public class DefaultResizerFactory implements ResizerFactory {
 		return INSTANCE;
 	}
 	
+	@Override
 	public Resizer getResizer() {
-		return Resizers.PROGRESSIVE;
+		if (MUST_USE_PRL_RESIZERS) {
+			return Resizers.PARALLEL_PROGRESSIVE_BILINEAR;
+		} else {
+			return Resizers.PROGRESSIVE;
+		}
 	}
 	
+	@Override
 	public Resizer getResizer(Dimension originalSize, Dimension thumbnailSize) {
 		int origWidth = originalSize.width;
 		int origHeight = originalSize.height;
@@ -131,15 +143,32 @@ public class DefaultResizerFactory implements ResizerFactory {
 		
 		if (thumbWidth < origWidth && thumbHeight < origHeight) {
 			if (thumbWidth < (origWidth / 2) && thumbHeight < (origHeight / 2)) {
-				return Resizers.PROGRESSIVE;
+				if (MUST_USE_PRL_RESIZERS) {
+					return Resizers.PARALLEL_PROGRESSIVE_BILINEAR;
+				} else {
+					return Resizers.PROGRESSIVE;
+				}
 			} else {
-				return Resizers.BILINEAR;
+				if (MUST_USE_PRL_RESIZERS) {
+					return Resizers.PARALLEL_BILINEAR;
+				} else {
+					return Resizers.BILINEAR;
+				}
 			}
 		}
 		else if (thumbWidth > origWidth && thumbHeight > origHeight) {
-			return Resizers.BICUBIC;
+			if (MUST_USE_PRL_RESIZERS) {
+				return Resizers.PARALLEL_BICUBIC;
+			} else {
+				return Resizers.BICUBIC;
+			}
 		} else if (thumbWidth == origWidth && thumbHeight == origHeight) {
-			return Resizers.NULL;
+			if (MUST_USE_PRL_RESIZERS) {
+				// Works like NULL when no resizing.
+				return Resizers.PARALLEL_NEAREST;
+			} else {
+				return Resizers.NULL;
+			}
 		} else {
 			return getResizer();
 		}

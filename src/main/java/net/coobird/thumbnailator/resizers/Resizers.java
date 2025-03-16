@@ -25,6 +25,14 @@
 package net.coobird.thumbnailator.resizers;
 
 import java.awt.image.BufferedImage;
+import java.util.concurrent.Executor;
+
+import net.coobird.thumbnailator.resizers.prl.ParallelBicubicResizer;
+import net.coobird.thumbnailator.resizers.prl.ParallelBilinearResizer;
+import net.coobird.thumbnailator.resizers.prl.ParallelNearestResizer;
+import net.coobird.thumbnailator.resizers.prl.ParallelResizer;
+import net.coobird.thumbnailator.resizers.prl.PrlResizersUtils;
+import net.coobird.thumbnailator.resizers.prl.ProgressiveResizer;
 
 /**
  * <p>
@@ -59,7 +67,7 @@ Resizers.BILINEAR.resize(sourceImage, destImage);
  * @author coobird
  *
  */
-public enum Resizers implements Resizer {
+public enum Resizers implements ParallelResizer {
 	/**
 	 * A {@link Resizer} which does not perform resizing operations. The source
 	 * image will be drawn at the origin of the destination image.
@@ -85,7 +93,52 @@ public enum Resizers implements Resizer {
 	 * For details on this technique, refer to the documentation of the
 	 * {@link ProgressiveBilinearResizer} class.
 	 */
-	PROGRESSIVE(new ProgressiveBilinearResizer())
+	PROGRESSIVE(new ProgressiveBilinearResizer()),
+	
+	/**
+	 * A {@link Resizer} which performs resizing operations using
+	 * nearest scaling and possibly in parallel.
+	 * <p>
+	 * For details on this technique, refer to the documentation of the
+	 * {@link ParallelNearestResizer} class.
+	 */
+	PARALLEL_NEAREST(new ParallelNearestResizer()),
+	
+	/**
+	 * A {@link Resizer} which performs resizing operations using
+	 * bilinear scaling and possibly in parallel.
+	 * <p>
+	 * For details on this technique, refer to the documentation of the
+	 * {@link ParallelBilinearResizer} class.
+	 */
+	PARALLEL_BILINEAR(new ParallelBilinearResizer()),
+	
+	/**
+	 * A {@link Resizer} which performs resizing operations using
+	 * bicubic scaling and possibly in parallel.
+	 * <p>
+	 * For details on this technique, refer to the documentation of the
+	 * {@link ParallelBicubicResizer} class.
+	 */
+	PARALLEL_BICUBIC(new ParallelBicubicResizer()),
+	
+	/**
+	 * A {@link Resizer} which performs resizing operations using
+	 * progressive bilinear scaling and possibly in parallel.
+	 * <p>
+	 * For details on this technique, refer to the documentation of the
+	 * {@link ProgressiveResizer} and {@link ParallelBilinearResizer} classes.
+	 */
+	PARALLEL_PROGRESSIVE_BILINEAR(new ProgressiveResizer(new ParallelBilinearResizer())),
+	
+	/**
+	 * A {@link Resizer} which performs resizing operations using
+	 * progressive bicubic scaling and possibly in parallel.
+	 * <p>
+	 * For details on this technique, refer to the documentation of the
+	 * {@link ProgressiveResizer} and {@link ParallelBicubicResizer} classes.
+	 */
+	PARALLEL_PROGRESSIVE_BICUBIC(new ProgressiveResizer(new ParallelBicubicResizer()))
 	;
 	
 	private final Resizer resizer;
@@ -94,7 +147,13 @@ public enum Resizers implements Resizer {
 		this.resizer = resizer;
 	}
 
+	@Override
 	public void resize(BufferedImage srcImage, BufferedImage destImage) {
 		resizer.resize(srcImage, destImage);
+	}
+
+	@Override
+	public void resize(BufferedImage srcImage, BufferedImage destImage, Executor parallelExecutor) {
+		PrlResizersUtils.resizeEventuallyInParallel(resizer, srcImage, destImage, parallelExecutor);
 	}
 }
