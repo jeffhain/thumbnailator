@@ -84,58 +84,58 @@ public class ProgressiveBilinearResizer extends AbstractResizer {
 			throws NullPointerException {
 		super.performChecks(srcImage, destImage);
 		
-        final int targetWidth = destImage.getWidth();
-        final int targetHeight = destImage.getHeight();
-        
-        BufferedImage currentSrcImage = srcImage;
-        int currentSrcWidth = currentSrcImage.getWidth();
-        int currentSrcHeight = currentSrcImage.getHeight();
-        
-        // Temporary image used for in-place resizing of image.
-        BufferedImage tempImage = null;
-        Graphics2D g = null;
-        while (true) {
-            // +1 to avoid downscaling by more than 2 when span is odd.
-            final int tempDstWidth = Math.max(targetWidth, ((currentSrcWidth + 1) / 2));
-            final int tempDstHeight = Math.max(targetHeight, ((currentSrcHeight + 1) / 2));
-            if ((tempDstWidth <= targetWidth)
-                && (tempDstHeight <= targetHeight)) {
-                /*
-                 * Each current span is either close enough from, or lower than, target span:
-                 * will finish by drawing with target spans on destination image.
-                 */
-                break;
-            }
-            
-            if (tempImage == null) {
-                tempImage = new BufferedImageBuilder(
-                    tempDstWidth,
-                    tempDstHeight,
-                    // Fastest type for bilinear (and bicubic).
-                    BufferedImage.TYPE_INT_ARGB_PRE
-                    ).build();
-                g = createGraphics(tempImage);
-                g.setComposite(AlphaComposite.Src);
-            }
-            
-            g.drawImage(
-                currentSrcImage,
-                0, 0, tempDstWidth, tempDstHeight,
-                0, 0, currentSrcWidth, currentSrcHeight,
-                null
-                );
-            
-            currentSrcImage = tempImage;
-            currentSrcWidth = tempDstWidth;
-            currentSrcHeight = tempDstHeight;
-        }
-        if (g != null) {
-            g.dispose();
-        }
-        
-        // Last resizing: target spans onto the destination image.
-        Graphics2D destg = createGraphics(destImage);
-        destg.drawImage(currentSrcImage, 0, 0, targetWidth, targetHeight, 0, 0, currentSrcWidth, currentSrcHeight, null);
+		final int targetWidth = destImage.getWidth();
+		final int targetHeight = destImage.getHeight();
+		
+		BufferedImage currentSrcImage = srcImage;
+		int currentSrcWidth = currentSrcImage.getWidth();
+		int currentSrcHeight = currentSrcImage.getHeight();
+		
+		// Temporary image used for in-place resizing of image.
+		BufferedImage tempImage = null;
+		Graphics2D g = null;
+		while (true) {
+			// +1 to avoid downscaling by more than 2 when span is odd.
+			final int tempDstWidth = Math.max(targetWidth, ((currentSrcWidth + 1) / 2));
+			final int tempDstHeight = Math.max(targetHeight, ((currentSrcHeight + 1) / 2));
+			if ((tempDstWidth <= targetWidth)
+				&& (tempDstHeight <= targetHeight)) {
+				/*
+				 * Each current span is either close enough from, or lower than, target span:
+				 * will finish by drawing with target spans on destination image.
+				 */
+				break;
+			}
+			
+			if (tempImage == null) {
+				tempImage = new BufferedImageBuilder(
+					tempDstWidth,
+					tempDstHeight,
+					// Fastest type for bilinear (and bicubic).
+					BufferedImage.TYPE_INT_ARGB_PRE
+					).build();
+				g = createGraphics(tempImage);
+				g.setComposite(AlphaComposite.Src);
+			}
+			
+			g.drawImage(
+				currentSrcImage,
+				0, 0, tempDstWidth, tempDstHeight,
+				0, 0, currentSrcWidth, currentSrcHeight,
+				null
+				);
+			
+			currentSrcImage = tempImage;
+			currentSrcWidth = tempDstWidth;
+			currentSrcHeight = tempDstHeight;
+		}
+		if (g != null) {
+			g.dispose();
+		}
+		
+		// Last resizing: target spans onto the destination image.
+		Graphics2D destg = createGraphics(destImage);
+		destg.drawImage(currentSrcImage, 0, 0, targetWidth, targetHeight, 0, 0, currentSrcWidth, currentSrcHeight, null);
 		destg.dispose();
 	}
 }
