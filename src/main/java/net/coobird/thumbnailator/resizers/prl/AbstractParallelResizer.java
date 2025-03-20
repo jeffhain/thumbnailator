@@ -77,6 +77,14 @@ public abstract class AbstractParallelResizer extends AbstractResizer implements
 			MyCmnData cmn,
 			int destStartRow,
 			int destEndRow) {
+			if (destStartRow > destEndRow) {
+				throw new IllegalArgumentException(
+					destStartRow + " > " + destEndRow);
+			}
+			if (destEndRow >= cmn.destImage.getHeight()) {
+				throw new IllegalArgumentException(
+					destEndRow + " >= " + cmn.destImage.getHeight());
+			}
 			this.cmn = cmn;
 			this.destStartRow = destStartRow;
 			this.destEndRow = destEndRow;
@@ -233,20 +241,22 @@ public abstract class AbstractParallelResizer extends AbstractResizer implements
 				destImage,
 				latch);
 		
+		final double partHeightFp = dh / (double) partCount;
+		
 		int prevDestEndRowIndex = -1;
 		for (int i = 0; i < partCount; i++) {
-			int destStartRowIndex = prevDestEndRowIndex + 1;
-			// in ]0,1]
-			final double endRowRatio = (i + 1) / (double) partCount;
-			// Increments of at least 1 per round,
-			// since partCount <= targetHeight.
-			// Not using round(), which behavior depends on JDK version.
-			int destEndRowIndex = (int) Math.rint(endRowRatio * (dh - 1));
+			final int destStartRowIndex = prevDestEndRowIndex + 1;
+			final double destEndRowIndexFp = partHeightFp * i + (partHeightFp - 1.0);
+			final int destEndRowIndex = (int) (destEndRowIndexFp + 0.5);
 			runnableArr[i] = new MyPrlRunnable(
 				cmn,
 				destStartRowIndex,
 				destEndRowIndex);
 			prevDestEndRowIndex = destEndRowIndex;
+		}
+		if (prevDestEndRowIndex != dh - 1) {
+			// Means our algo doesn't go to last row.
+			throw new AssertionError();
 		}
 		
 		ThbPrlEngine.parallelRun(
